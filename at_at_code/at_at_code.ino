@@ -52,6 +52,22 @@ void setup() {
     // ^???
     servoDiscovery(i);
   }
+
+
+}
+
+void RobotStartingPosition() {
+  LegAngles angles;
+
+  Coordinates coords_stand = Coordinates(0, -240);
+  angles = singleLegAngles(coords_stand);
+  testMoveSingleLeg(1, angles);
+  delay(2000);
+
+  Coordinates coords_ready = Coordinates(0, -230);
+  angles = singleLegAngles(coords_ready);
+  testMoveSingleLeg(1, angles);
+  delay(1000);
 }
 
 bool servoDiscovery(int servoId) {
@@ -77,6 +93,7 @@ int legOrderId = 0;
 
 int typeOfMovement = 1;    // 0: none; 1: forward; 2: backward; 3: left; 4: right;
 int whichLegIsMoving = 1;  // 0: none; 1: front-left; 2: front-right; 3: back-left; 4: back-right;
+int stepDuration = 500;
 
 bool moveLeg(int legId, int position[2]) {
   Serial.print("");
@@ -84,10 +101,45 @@ bool moveLeg(int legId, int position[2]) {
 }
 
 
-LegAngles angles;
-Coordinates coords;
 
+double getParabolaY(double x) {
+  return -1;  // TODO: add parabola calculations
+}
+
+// do not remove start and stop - it will be usefull for making turns
+Coordinates getMovementTrajectory(long startTime, Coordinates start, Coordinates stop, int duration, bool isLeading) {
+  long currentTime = millis();
+  double multiplicationFactor = (currentTime - startTime) / duration;
+
+  Coordinates vector = stop-start;
+  vector.multiply(double multiplicationFactor);
+
+  Coordinates newCoordinates = start + vector;
+  if (isLeading) {
+    newCoordinates.y = getParabolaY(newCoordinates.x);
+  }
+
+  return newCoordinates;
+}
+
+
+LegAngles angles;
+Coordinates coords[8] = {
+  Coordinates(0, -200),
+  Coordinates(-51, -230),
+  Coordinates(-34, -230),
+  Coordinates(-17, -230),
+  Coordinates(0, -230),
+  Coordinates(17, -230),
+  Coordinates(34, -230),
+  Coordinates(51, -230),
+};
+
+int coordinateId = 0;
 void loop() {
+  if (coordinateId >= sizeof(coords)) {
+    coordinateId = 0;
+  }
   //main loop idea was if walking state changes it goes either straight backwards, left/right (only straight is working atm)
 
   // NEW CODE
@@ -103,265 +155,25 @@ void loop() {
   //================================================
 
   // long time = millis()
-  coords = Coordinates(0, -240);
-  angles = singleLegAngles(coords);
-  testMoveSingleLeg(1, angles);
-  delay(5000);
 
 
-  coords = Coordinates(0, -230);
-  angles = singleLegAngles(coords);
+  angles = singleLegAngles(coords[coordinateId]);
   testMoveSingleLeg(1, angles);
   delay(1000);
 
-  coords = Coordinates(0, -200);
-  angles = singleLegAngles(coords);
-  testMoveSingleLeg(1, angles);
-  delay(1000);
+  // Naive test for all 4 legs (without taking order into account)
+  for (int legId = 0; legId < 4; legId++) {
+    int coordsId = (coordinateId + 2*legId) % 8;
+    angles = singleLegAngles(coords[coordsId]);
+    testMoveSingleLeg(legId, angles);
+    delay(1000);
+  }
 
-  coords = Coordinates(-51, -230);
-  angles = singleLegAngles(coords);
-  testMoveSingleLeg(1, angles);
-  delay(1000);
-
-  coords = Coordinates(-34, -230);
-  angles = singleLegAngles(coords);
-  testMoveSingleLeg(1, angles);
-  delay(1000);
-
-  coords = Coordinates(-17, -230);
-  angles = singleLegAngles(coords);
-  testMoveSingleLeg(1, angles);
-  delay(1000);
-
-  coords = Coordinates(0, -230);
-  angles = singleLegAngles(coords);
-  testMoveSingleLeg(1, angles);
-  delay(1000);
-
-  coords = Coordinates(17, -230);
-  angles = singleLegAngles(coords);
-  testMoveSingleLeg(1, angles);
-  delay(1000);
-
-  coords = Coordinates(34, -230);
-  angles = singleLegAngles(coords);
-  testMoveSingleLeg(1, angles);
-  delay(1000);
-
-  coords = Coordinates(51, -230);
-  angles = singleLegAngles(coords);
-  testMoveSingleLeg(1, angles);
-  delay(1000);
-
-
-
-
-  // while (!flag_var){
-  //   //the straight walking movement. it works by changing the position every half a second in a circle.
-  //   //so the position of every motor is changed after 500ms
-  //   //there are 8 position in totals so 1 complete cycle takes 4s in total
-  //   //the loop goes as following back left, front left, back right front right and over again.
-  //   //the legs are spaced 1 second apart for the right walking movement in the same order as said earlier
-  //   //so imaging back left=1, front left=2 etc.
-  //   //the 8 coordinates are the following (the code is also base upon this circle)
-  //   //x,  y
-  //   //0,-230
-  //   //17, -230
-  //   //34, -230
-  //   //51, -230
-  //   //0, -200    //lifting the leg
-  //   //-51, -230
-  //   //-34, -230
-  //   //-17, -230
-  //   // and over againnn
-
-  //   double angles[8]; //calculated angles put in here
-  //   int coords[8] = {0, -240, 0, -240 ,0 ,-240, 0, -240}; //coords
-  //   coords[0]= 0;  //x
-  //   coords[1]= -240;  //y
-  //   coords[2]= 0;
-  //   coords[3]= -240;
-  //   coords[4]= 0;
-  //   coords[5]= -240;
-  //   coords[6]= 0;
-  //   coords[7]= -240;
-
-  //   tf=millis()+500;
-  //   while(millis()<tf)
-  //   {
-  //     coords[4]= 0;
-  //     coords[5]= -230;
-  //     coords[0]= 34;
-  //     coords[1]= -230;
-  //     coords[6]= 0;
-  //     coords[7]= -200;
-  //     coords[2]= -34;
-  //     coords[3]= -230;
-
-  //     calculateAngles(coords, angles);
-  //     writing_legs(angles);
-
-  //     Serial.print(dxl.getPresentPosition(3,UNIT_DEGREE));
-  //     Serial.print(",");
-  //     Serial.print(dxl.readControlTableItem(POSITION_TRAJECTORY,3)*360/4096);
-  //     Serial.print(",");
-  //     Serial.print(dxl.readControlTableItem(GOAL_POSITION,3)*360/4096);
-  //     Serial.print(",");
-  //     Serial.println(dxl.getPresentCurrent(3,UNIT_MILLI_AMPERE));
-  //   }
-
-  //   tf=millis()+500;
-  //   while(millis()<tf)
-  //   {
-
-  //     calculateAngles(coords, angles);
-  //     writing_legs(angles);
-  //   }
-
-  //   tf=millis()+500;
-  //   while(millis()<tf)
-  //   {
-  //     coords[4]= 17;
-  //     coords[5]= -230;
-  //     coords[0]= 51;
-  //     coords[1]= -230;
-  //     coords[6]= -51;
-  //     coords[7]= -230;
-  //     coords[2]= -17;
-  //     coords[3]= -230;
-  //     calculateAngles(coords, angles);
-  //     writing_legs(angles);
-  //   }
-
-  //   tf=millis()+500;
-  //   while(millis()<tf)
-  //   {
-  //     coords[4]= 34;
-  //     coords[5]= -230;
-  //     coords[0]= 0;
-  //     coords[1]= -200;
-  //     coords[6]= -34;
-  //     coords[7]= -230;
-  //     coords[2]= 0;
-  //     coords[3]= -230;
-  //     calculateAngles(coords, angles);
-  //     writing_legs(angles);
-  //   }
-
-  //   tf=millis()+500;
-  //   while(millis()<tf)
-  //   {
-  //     coords[4]= 51;
-  //     coords[5]= -230;
-  //     coords[0]= -51;
-  //     coords[1]= -230;
-  //     coords[6]= -17;
-  //     coords[7]= -230;
-  //     coords[2]= 17;
-  //     coords[3]= -230;
-  //     calculateAngles(coords, angles);
-  //     writing_legs(angles);
-  //   }
-
-  //   tf=millis()+500;
-  //   while(millis()<tf)
-  //   {
-  //     coords[4]= 0;
-  //     coords[5]= -200;
-  //     coords[0]= -34;
-  //     coords[1]= -230;
-  //     coords[6]= 0;
-  //     coords[7]= -230;
-  //     coords[2]= 34;
-  //     coords[3]= -230;
-  //     calculateAngles(coords, angles);
-  //     writing_legs(angles);
-  //   }
-
-  //   tf=millis()+500;
-  //   while(millis()<tf)
-  //   {
-  //     coords[4]= -51;
-  //     coords[5]= -230;
-  //     coords[0]= -17;
-  //     coords[1]= -230;
-  //     coords[6]= 17;
-  //     coords[7]= -230;
-  //     coords[2]= 51;
-  //     coords[3]= -230;
-  //     calculateAngles(coords, angles);
-  //     writing_legs(angles);
-  //   }
-
-  //   tf=millis()+500;
-  //   while(millis()<tf)
-  //   {
-  //     coords[4]= -34;
-  //     coords[5]= -230;
-  //     coords[0]= 0;
-  //     coords[1]= -230;
-  //     coords[6]= 34;
-  //     coords[7]= -230;
-  //     coords[2]= 0;
-  //     coords[3]= -200;
-  //     calculateAngles(coords, angles);
-  //     writing_legs(angles);
-  //   }
-
-
-  //   // Serial.println("angles: ");
-  //   // Serial.print(angles[0]);
-  //   // Serial.print(" ");
-  //   // Serial.print(angles[1]);
-  //   // Serial.print(" ");
-  //   // Serial.print(angles[2]);
-  //   // Serial.print(" ");
-  //   // Serial.print(angles[3]);
-  //   // Serial.print(" ");
-  //   // Serial.print(angles[4]);
-  //   // Serial.print(" ");
-  //   // Serial.print(angles[5]);
-  //   // Serial.print(" ");
-  //   // Serial.print(angles[6]);
-  //   // Serial.print(" ");
-  //   // Serial.println(angles[7]);
-
-
-  //   // while(millis()<tf)
-  //   // // {
-  //   //   Serial.print(dxl.getPresentPosition(3,UNIT_DEGREE));
-  //   //   Serial.print(",");
-  //   //   Serial.print(dxl.readControlTableItem(POSITION_TRAJECTORY,3)*360/4096);
-  //   //   Serial.print(",");
-  //   //   Serial.print(dxl.readControlTableItem(GOAL_POSITION,3)*360/4096);
-  //   //   Serial.print(",");
-  //   //   Serial.println(dxl.getPresentCurrent(3,UNIT_MILLI_AMPERE));
-  //   // }
-
-
-
-  //   // tf=millis()+4000;
-  //   // while(millis()<tf)
-  //   // {
-  //   //   Serial.print(dxl.getPresentPosition(3,UNIT_DEGREE));
-  //   //   Serial.print(",");
-  //   //   Serial.print(dxl.readControlTableItem(POSITION_TRAJECTORY,3)*360/4096);
-  //   //   Serial.print(",");
-  //   //   Serial.print(dxl.readControlTableItem(GOAL_POSITION,3)*360/4096);
-  //   //   Serial.print(",");
-  //   //   Serial.println(dxl.getPresentCurrent(3,UNIT_MILLI_AMPERE));
-  //   // }
-
-
-  // }
-
-
-//stuff for pawel
-    while (Serial2.available()) {
-      char inputChar = Serial2.read();
-      messageBuffer += inputChar;
-      delay(2);
+  // Bluetooth signals handling
+  while (Serial2.available()) {
+    char inputChar = Serial2.read();
+    messageBuffer += inputChar;
+    delay(2);
 
     // Serial.print(messageBuffer + "  |  ");
     if (inputChar == ';') {
@@ -380,33 +192,6 @@ void loop() {
   }
   messageBuffer = "";
 }
-
-
-// the algorithm for calculating the motor angles based upon inverse kinematics
-void calculateAngles(int inp_coords[], double out_angles[]) {
-
-  double C_factor = 3.8298;
-  double q1, q2;
-
-  for (int i = 0; i <= 6; i += 2) {
-    q2 = acos((inp_coords[i] * inp_coords[i] + inp_coords[i + 1] * inp_coords[i + 1] - 2 * (LEG_LENGTH * LEG_LENGTH)) / (2 * LEG_LENGTH * LEG_LENGTH));
-    q1 = atan2(inp_coords[i + 1], inp_coords[i]) - atan2(LEG_LENGTH * sin(q2), LEG_LENGTH + LEG_LENGTH * cos(q2));
-
-    q1 = degrees(q1);
-    q2 = degrees(q2);
-
-    if (i == 4 || i == 0) {
-      out_angles[i] = 180 - ((90 + q1) * C_factor);
-      out_angles[i + 1] = 180 - ((90 + q1 + q2) * C_factor);
-    }
-    if (i == 6 || i == 2) {
-      out_angles[i] = 180 + ((90 + q1) * C_factor);
-      out_angles[i + 1] = 180 + ((90 + q1 + q2) * C_factor);
-    }
-  }
-}
-
-
 
 LegAngles singleLegAngles(Coordinates coords) {
   double C_factor = 3.8298;
@@ -427,20 +212,7 @@ void testMoveSingleLeg(int legId, LegAngles legAngles) {
   dxl.setGoalPosition(2 * legId, legAngles.lowerAngle, UNIT_DEGREE);
 }
 
-
-
-//this function updates all the motor angles when giving the array of 8 new positions.
-void writing_legs(double angles[8]) {
-  dxl.setGoalPosition(1, angles[0], UNIT_DEGREE);
-  dxl.setGoalPosition(2, angles[1], UNIT_DEGREE);
-  dxl.setGoalPosition(3, angles[2], UNIT_DEGREE);
-  dxl.setGoalPosition(4, angles[3], UNIT_DEGREE);
-  dxl.setGoalPosition(5, angles[4], UNIT_DEGREE);
-  dxl.setGoalPosition(6, angles[5], UNIT_DEGREE);
-  dxl.setGoalPosition(7, angles[6], UNIT_DEGREE);
-  dxl.setGoalPosition(8, angles[7], UNIT_DEGREE);
-}
-//stuff for pawel
+// Debugging bluetooth signals using serial monitor
 void dumpDataSerial2() {
   while (Serial2.available()) Serial2.read();
 }
