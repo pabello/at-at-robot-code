@@ -355,11 +355,13 @@ void loop() {
 
 
   // }
-  //stuff for pawel
-  while (Serial2.available()) {
-    char inputChar = Serial2.read();
-    messageBuffer += inputChar;
-    delay(2);
+
+
+//stuff for pawel
+    while (Serial2.available()) {
+      char inputChar = Serial2.read();
+      messageBuffer += inputChar;
+      delay(2);
 
     // Serial.print(messageBuffer + "  |  ");
     if (inputChar == ';') {
@@ -442,3 +444,5 @@ void writing_legs(double angles[8]) {
 void dumpDataSerial2() {
   while (Serial2.available()) Serial2.read();
 }
+
+
