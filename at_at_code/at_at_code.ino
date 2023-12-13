@@ -34,6 +34,14 @@ bool flag_var = false;
 unsigned long tf = millis() + 500;
 
 
+int legsOrder[4] = { 1, 2, 3, 4 };  // thanks to this list we can try different setups of leg movement order
+int legOrderId = 0;
+
+int typeOfMovement = 1;    // 0: none; 1: forward; 2: backward; 3: left; 4: right;
+int whichLegIsMoving = 1;  // 0: none; 1: front-left; 2: front-right; 3: back-left; 4: back-right;
+int stepDuration = 500;
+
+
 //configuring the motors and stuff for pawel
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);  // Arduino builtin led for debugging
@@ -53,23 +61,30 @@ void setup() {
     servoDiscovery(i);
   }
 
-
+  RobotStartingPosition();
 }
 
 void RobotStartingPosition() {
   LegAngles angles;
 
   Coordinates coords_stand = Coordinates(0, -240);
-  angles = singleLegAngles(coords_stand);
-  testMoveSingleLeg(1, angles);
+  angles = singleLegAngles(coords_stand, false);
+  for (int legId : legsOrder) {
+    testMoveSingleLeg(legId, angles);
+  }
   delay(2000);
 
   Coordinates coords_ready = Coordinates(0, -230);
-  angles = singleLegAngles(coords_ready);
-  testMoveSingleLeg(1, angles);
+  for (int legId : legsOrder) {
+    bool invertedAngles = ((legId + 1) % 2);
+    angles = singleLegAngles(coords_ready, invertedAngles);
+    testMoveSingleLeg(legId, angles);
+  }
   delay(1000);
 }
 
+
+// TODO: What do these lines do? If not important then remove.
 bool servoDiscovery(int servoId) {
   dxl.torqueOff(servoId);
   dxl.setOperatingMode(servoId, OP_CURRENT_BASED_POSITION);
@@ -88,22 +103,15 @@ bool servoDiscovery(int servoId) {
 
 
 
-int legsOrder[4] = { 1, 2, 3, 4 };  // thanks to this list we can try different setups of leg movement order
-int legOrderId = 0;
-
-int typeOfMovement = 1;    // 0: none; 1: forward; 2: backward; 3: left; 4: right;
-int whichLegIsMoving = 1;  // 0: none; 1: front-left; 2: front-right; 3: back-left; 4: back-right;
-int stepDuration = 500;
-
-bool moveLeg(int legId, int position[2]) {
-  Serial.print("");
-  // return true/false to indicate if the movement has finished
-}
+// bool moveLeg(int legId, int position[2]) {
+//   Serial.print("");
+//   // return true/false to indicate if the movement has finished
+// }
 
 
 
 double getParabolaY(double x) {
-  return -1;  // TODO: add parabola calculations
+  return (-0.012 * (x*x)) + 30;
 }
 
 // do not remove start and stop - it will be usefull for making turns
@@ -112,7 +120,7 @@ Coordinates getMovementTrajectory(long startTime, Coordinates start, Coordinates
   double multiplicationFactor = (currentTime - startTime) / duration;
 
   Coordinates vector = stop-start;
-  vector.multiply(double multiplicationFactor);
+  vector.multiply(multiplicationFactor);
 
   Coordinates newCoordinates = start + vector;
   if (isLeading) {
@@ -135,12 +143,11 @@ Coordinates coords[8] = {
   Coordinates(51, -230),
 };
 
-int coordinateId = 0;
+int coordinateId = -1;
 void loop() {
-  if (coordinateId >= sizeof(coords)) {
+  if (++coordinateId >= sizeof(coords)) {
     coordinateId = 0;
   }
-  //main loop idea was if walking state changes it goes either straight backwards, left/right (only straight is working atm)
 
   // NEW CODE
   // if (typeOfMovement > 0) {
@@ -154,17 +161,12 @@ void loop() {
   // }
   //================================================
 
-  // long time = millis()
-
-
-  angles = singleLegAngles(coords[coordinateId]);
-  testMoveSingleLeg(1, angles);
-  delay(1000);
 
   // Naive test for all 4 legs (without taking order into account)
   for (int legId = 0; legId < 4; legId++) {
     int coordsId = (coordinateId + 2*legId) % 8;
-    angles = singleLegAngles(coords[coordsId]);
+    bool invertAngles = (legId + 1) % 2;  // gives 0 for left side and 1 for right side
+    angles = singleLegAngles(coords[coordsId], invertAngles);
     testMoveSingleLeg(legId, angles);
     delay(1000);
   }
@@ -193,16 +195,21 @@ void loop() {
   messageBuffer = "";
 }
 
-LegAngles singleLegAngles(Coordinates coords) {
+LegAngles singleLegAngles(Coordinates coords, bool inverted) {
   double C_factor = 3.8298;
   double q1, q2;
+  int invertionFactor = 1;
   LegAngles angles;
+
+  if (inverted) {
+    invertionFactor = -1;
+  }
 
   q2 = acos((coords.x * coords.x + coords.y * coords.y - LEG_LENGTH * LEG_LENGTH - LEG_LENGTH * LEG_LENGTH) / (2 * LEG_LENGTH * LEG_LENGTH));
   q1 = atan2(coords.y, coords.x) - atan2(LEG_LENGTH * sin(q2), LEG_LENGTH + LEG_LENGTH * cos(q2));
 
-  angles.upperAngle = 180 - ((90 + degrees(q1)) * C_factor);
-  angles.lowerAngle = 180 - ((90 + degrees(q1) + degrees(q2)) * C_factor);
+  angles.upperAngle = 180 - (invertionFactor * ((90 + degrees(q1)) * C_factor));
+  angles.lowerAngle = 180 - (invertionFactor * ((90 + degrees(q1) + degrees(q2)) * C_factor));
 
   return angles;
 }
