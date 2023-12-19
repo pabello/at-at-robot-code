@@ -9,8 +9,11 @@ Coordinates standPosition = Coordinates(0, -240);
 Coordinates readyPosition = Coordinates(0, -230);
 Coordinates frontPosition = Coordinates(-50, -230);
 Coordinates backPosition = Coordinates(50, -230);
-Coordinates turnFrontPosition = Coordinates(-20, -230);
-Coordinates turnBackPosition = Coordinates(20, -230);
+
+Coordinates frontLegTurnFrontPosition = Coordinates(30, -230);
+Coordinates frontLegTurnBackPosition = Coordinates(50, -230);
+Coordinates backLegTurnFrontPosition = Coordinates(-50, -230);
+Coordinates backLegTurnBackPosition = Coordinates(-30, -230);
 
 Leg legs[4] = {
   Leg(1, readyPosition, readyPosition, 0),  // [0] -> 1: front-left
@@ -230,6 +233,17 @@ void discoverLegPositions() {
     }
     if ((typeOfMovement == 3) || (typeOfMovement == 4)) {  // turn left OR turn right
       bool isTurning = (((typeOfMovement == 3) && ((leg.legId % 2) == 1)) || ((typeOfMovement == 4) && ((leg.legId % 2) == 0)));
+      bool isFrontLeg = ((leg.legId == 1) || (leg.legId == 2));
+
+      Coordinates turnFrontPosition, turnBackPosition;
+
+      if (isFrontLeg) {
+        turnFrontPosition = frontLegTurnFrontPosition;
+        turnBackPosition = frontLegTurnBackPosition;
+      } else {
+        turnFrontPosition = backLegTurnFrontPosition;
+        turnBackPosition = backLegTurnBackPosition;
+      }
 
       if (isTurning) {
         if (isLeading) {
